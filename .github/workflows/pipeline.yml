@@ -104,10 +104,11 @@ jobs:
 
       - name: Apply Kubernetes Deployment
         run: |
-          kubectl apply -f kubernetes
-          
-      - name: Check Deployment Status
-        run: |
+          kubectl apply -f kubernetes 
+
+          kubectl rollout status deployment/github-api-service
+        
+          # Get deployment status and service info
           echo "Deployment Status:"
           kubectl get deployments
           echo "Service Status:"
