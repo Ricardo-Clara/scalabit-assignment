@@ -96,7 +96,7 @@ jobs:
           
           minikube start --driver=docker
 
-      - name: Run create_secret.sh to create Kubernetes secrets
+      - name: Create secret
         run: |
           kubectl create secret generic github-secret \
           --from-literal=token=${{ secrets.TOKEN }} \
@@ -104,9 +104,8 @@ jobs:
 
       - name: Apply Kubernetes Deployment
         run: |
-          kubectl apply -f kubernetes 
-
-          kubectl rollout status deployment/github-api-service
+          kubectl apply -f kubernetes/deployment.yml 
+          kubectl apply -f kubernetes/service.yml 
         
           # Get deployment status and service info
           echo "Deployment Status:"
@@ -115,9 +114,6 @@ jobs:
           kubectl get services
           echo "Pods Status:"
           kubectl get pods
-          echo
           # Get service URL
           echo "Service URL:"
-          minikube service github-api-service --url
-          echo "Application is accessible at:"
           minikube service github-api-service --url
