@@ -39,6 +39,7 @@ func GetClientForTest(mockClient ApplicationInterface) *Client {
 }
 
 func GetClient() (*Client, error) {
+    // Use this if running without minikube
 	// err := godotenv.Load("config.env")
 	// if err != nil {
 	// 	fmt.Println("Warning: Could not load .env file. Using system environment variables.")

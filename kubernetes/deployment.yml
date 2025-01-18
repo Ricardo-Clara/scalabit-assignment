@@ -14,17 +14,18 @@ spec:
     spec:
       containers:
       - name: github-api-service
-        image: your-image:latest
+        image: richie223/github-api-service:latest
+        imagePullPolicy: Always
         env:
         - name: token
           valueFrom:
             secretKeyRef:
               name: github-secrets
-              key: token
+              key: TOKEN
         - name: owner
           valueFrom:
             secretKeyRef:
               name: github-secrets
-              key: owner
+              key: OWNER
         ports:
         - containerPort: 8080
