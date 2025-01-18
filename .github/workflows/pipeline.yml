@@ -108,7 +108,7 @@ jobs:
           
       - name: Check Deployment Status
         run: |
-          "Deployment Status:"
+          echo "Deployment Status:"
           kubectl get deployments
           echo "Service Status:"
           kubectl get services
