@@ -3,7 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
-	"fmt"
+	_"fmt"
 	"os"
 
 	"net/http"
@@ -14,7 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/go-github/v68/github"
-	"github.com/joho/godotenv"
+	_"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
 )
 
@@ -39,19 +39,19 @@ func GetClientForTest(mockClient ApplicationInterface) *Client {
 }
 
 func GetClient() (*Client, error) {
-	err := godotenv.Load("internal/config/config.env")
-	if err != nil {
-		fmt.Println("Warning: Could not load .env file. Using system environment variables.")
-	}
+	// err := godotenv.Load("config.env")
+	// if err != nil {
+	// 	fmt.Println("Warning: Could not load .env file. Using system environment variables.")
+	// }
 	
-	token := os.Getenv("GITHUB_TOKEN")
-	owner := os.Getenv("GITHUB_OWNER")
+	token := os.Getenv("TOKEN")
+	owner := os.Getenv("OWNER")
 
 	if token == "" {
-		return nil, errors.New("missing GitHub token")
+		return nil, errors.New("missing token")
 	}
 	if owner == "" {
-		return nil, errors.New("missing GitHub owner")
+		return nil, errors.New("missing owner")
 	}
 
 	ctx := context.Background()

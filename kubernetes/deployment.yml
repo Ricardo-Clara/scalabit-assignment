@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: github-api-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: github-api-service
+  template:
+    metadata:
+      labels:
+        app: github-api-service
+    spec:
+      containers:
+      - name: github-api-service
+        image: your-image:latest
+        env:
+        - name: token
+          valueFrom:
+            secretKeyRef:
+              name: github-secrets
+              key: token
+        - name: owner
+          valueFrom:
+            secretKeyRef:
+              name: github-secrets
+              key: owner
+        ports:
+        - containerPort: 8080
