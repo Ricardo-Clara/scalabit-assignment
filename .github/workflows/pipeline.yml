@@ -91,7 +91,7 @@ jobs:
         run: |
           curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
           sudo install minikube-linux-amd64 /usr/local/bin/minikube
-          curl -LO "https://dl.k8s.io/release/v1.23.0/bin/linux/amd64/kubectl"
+          curl -LO "https://dl.k8s.io/release/v1.30.5/bin/linux/amd64/kubectl"
           sudo install kubectl /usr/local/bin/
           
           minikube start --driver=docker
@@ -99,8 +99,8 @@ jobs:
       - name: Create secret
         run: |
           kubectl create secret generic github-secret \
-          --from-literal=token=${{ secrets.TOKEN }} \
-          --from-literal=owner=${{ secrets.USER }}
+          --from-literal=TOKEN=${{ secrets.TOKEN }} \
+          --from-literal=OWNER=${{ secrets.USER }}
 
       - name: Apply Kubernetes Deployment
         run: |
