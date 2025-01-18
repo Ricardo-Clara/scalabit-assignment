@@ -105,7 +105,9 @@ jobs:
       - name: Apply Kubernetes Deployment
         run: |
           kubectl apply -f kubernetes/deployment.yml 
-          kubectl apply -f kubernetes/service.yml 
+          kubectl apply -f kubernetes/service.yml
+          
+          kubectl rollout status deployment/github-api-service
         
           # Get deployment status and service info
           echo "Deployment Status:"
