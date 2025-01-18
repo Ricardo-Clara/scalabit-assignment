@@ -17,12 +17,12 @@ spec:
         image: richie223/github-api-service:latest
         imagePullPolicy: Always
         env:
-        - name: token
+        - name: TOKEN
           valueFrom:
             secretKeyRef:
               name: github-secrets
               key: TOKEN
-        - name: owner
+        - name: OWNER
           valueFrom:
             secretKeyRef:
               name: github-secrets
