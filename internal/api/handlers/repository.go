@@ -2,35 +2,76 @@ package handlers
 
 import (
 	"context"
-	"net/http"
-	"time"
+	"errors"
+	"fmt"
+	"os"
 
-	"github-api-service/models"
-	"github-api-service/services"
+	"net/http"
+
+	"strconv"
+
+	"github-api-service/internal/models"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/go-github/v45/github"
+	"github.com/google/go-github/v68/github"
+	"github.com/joho/godotenv"
+	"golang.org/x/oauth2"
 )
 
-type RepositoryHandler struct {
-    githubService *services.GithubService
+type ApplicationInterface interface {
+    CreateRepository(c *gin.Context)
+    DeleteRepository(c *gin.Context)
+    ListRepositories(c *gin.Context)
+    ListOpenPullRequests(c *gin.Context)
 }
 
-func NewRepositoryHandler() *RepositoryHandler {
-    return &RepositoryHandler{
-        githubService: services.NewGithubService(),
+type Application struct {
+    githubClient *github.Client
+    owner string
+}
+
+type Client struct {
+    App ApplicationInterface
+}
+
+func GetClientForTest(mockClient ApplicationInterface) *Client {
+    return &Client{ App: mockClient }
+}
+
+func GetClient() (*Client, error) {
+	err := godotenv.Load("internal/config/config.env")
+	if err != nil {
+		fmt.Println("Warning: Could not load .env file. Using system environment variables.")
+	}
+	
+	token := os.Getenv("GITHUB_TOKEN")
+	owner := os.Getenv("GITHUB_OWNER")
+
+	if token == "" {
+		return nil, errors.New("missing GitHub token")
+	}
+	if owner == "" {
+		return nil, errors.New("missing GitHub owner")
+	}
+
+	ctx := context.Background()
+	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
+	tc := oauth2.NewClient(ctx, ts)
+
+	application := &Application{
+        githubClient: github.NewClient(tc),
+        owner: owner,
     }
+
+	return &Client{ App: application }, nil
 }
 
-func (h *RepositoryHandler) CreateRepository(c *gin.Context) {
+func (a *Application) CreateRepository(c *gin.Context) {
     var req models.RepoRequest
     if err := c.ShouldBindJSON(&req); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
-    
-    token := c.GetString("github_token")
-    client := h.githubService.GetClient(token)
     
     repo := &github.Repository{
         Name:        github.String(req.Name),
@@ -39,39 +80,30 @@ func (h *RepositoryHandler) CreateRepository(c *gin.Context) {
     }
     
     ctx := context.Background()
-    newRepo, _, err := client.Repositories.Create(ctx, "", repo)
+    newRepo, _, err := a.githubClient.Repositories.Create(ctx, a.owner, repo)
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
 
-	response := models.CreateRepoResponse{
+	response := models.RepoResponse{
         Message: "Repository created successfully",
-        Repository: models.RepositoryInfo{
-            ID:          newRepo.GetID(),
-            Name:        newRepo.GetName(),
-            FullName:    newRepo.GetFullName(),
-            Description: newRepo.GetDescription(),
-            Private:     newRepo.GetPrivate(),
-            HTMLURL:     newRepo.GetHTMLURL(),
-            CreatedAt:   newRepo.GetCreatedAt().Format(time.RFC3339),
-        },
+        Name: newRepo.GetName(),
+        Description: newRepo.GetDescription(),
+        Private: newRepo.GetPrivate(),
     }
     
     c.JSON(http.StatusCreated, response)
 }
 
-func (h *RepositoryHandler) ListRepositories(c *gin.Context) {
-    token := c.GetString("github_token")
-    client := h.githubService.GetClient(token)
-    
+func (a *Application) ListRepositories(c *gin.Context) {
     ctx := context.Background()
     opts := &github.RepositoryListOptions{
         ListOptions: github.ListOptions{PerPage: 100},
 		Type: "owner",
     }
     
-    repos, _, err := client.Repositories.List(ctx, "", opts)
+    repos, _, err := a.githubClient.Repositories.List(ctx, "", opts)
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
@@ -89,15 +121,11 @@ func (h *RepositoryHandler) ListRepositories(c *gin.Context) {
     c.JSON(http.StatusOK, formattedRepos)
 }
 
-func (h *RepositoryHandler) DeleteRepository(c *gin.Context) {
-    owner := c.Param("owner")
+func (a *Application) DeleteRepository(c *gin.Context) {
     repo := c.Param("repo")
     
-    token := c.GetString("github_token")
-    client := h.githubService.GetClient(token)
-    
     ctx := context.Background()
-    _, err := client.Repositories.Delete(ctx, owner, repo)
+    _, err := a.githubClient.Repositories.Delete(ctx, a.owner, repo)
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
@@ -105,32 +133,36 @@ func (h *RepositoryHandler) DeleteRepository(c *gin.Context) {
     
 	response := models.DeleteRepoResponse{
         Message: "Repository deleted successfully",
-        Details: models.RepoDetails{
-            Owner: owner,
-            Name:  repo,
-        },
     }
     
     c.JSON(http.StatusOK, response)
 }
 
-func (h *RepositoryHandler) ListOpenPullRequests(c *gin.Context) {
-    token := c.GetString("github_token")
-    owner := c.Param("owner")  // Get owner from request parameters
+func (a *Application) ListOpenPullRequests(c *gin.Context) {
     repo := c.Param("repo")    // Get repo name from request parameters
 
-    client := h.githubService.GetClient(token)
     ctx := context.Background()
-
     opts := &github.PullRequestListOptions{
         State: "open", // Fetch only open pull requests
         ListOptions: github.ListOptions{PerPage: 100},
     }
 
-    pullRequests, _, err := client.PullRequests.List(ctx, owner, repo, opts)
+    pullRequests, _, err := a.githubClient.PullRequests.List(ctx, a.owner, repo, opts)
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
+    }
+
+    // Get the 'limit' query parameter if provided
+    limit, err := strconv.Atoi(c.DefaultQuery("limit", "0"))
+    if err != nil || limit < 0 {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit parameter"})
+        return
+    }
+
+    // Apply limit if it's greater than 0 and less than the total number of PRs
+    if limit > 0 && limit < len(pullRequests) {
+        pullRequests = pullRequests[:limit]
     }
 
     formattedPRs := make([]models.PullRequestResponse, 0, len(pullRequests))
@@ -139,7 +171,7 @@ func (h *RepositoryHandler) ListOpenPullRequests(c *gin.Context) {
             Title:       pr.GetTitle(),
             Number:      pr.GetNumber(),
             User:        pr.GetUser().GetLogin(),
-            CreatedAt:   pr.GetCreatedAt(),
+            CreatedAt:   pr.GetCreatedAt().Time,
             HtmlURL:     pr.GetHTMLURL(),
         })
     }

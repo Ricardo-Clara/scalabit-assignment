@@ -5,18 +5,21 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github-api-service/middleware"
-	"github-api-service/routes"
+    "github-api-service/internal/api/handlers"
+	"github-api-service/internal/api/routes"
 )
+
+
 
 func main() {
     r := gin.Default()
     
-    // Add middleware to all routes
-    r.Use(middleware.AuthMiddleware())
-    
-    // Setup routes
-    routes.SetupRoutes(r)
+    client, err := handlers.GetClient()
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    routes.SetupRoutes(r, *client)
     
     log.Fatal(r.Run(":8080"))
 }
