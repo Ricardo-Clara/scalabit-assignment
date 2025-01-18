@@ -74,9 +74,9 @@ func (a *Application) CreateRepository(c *gin.Context) {
     }
     
     repo := &github.Repository{
-        Name:        github.String(req.Name),
-        Description: github.String(req.Description),
-        Private:     github.Bool(req.Private),
+        Name:        github.Ptr(req.Name),
+        Description: github.Ptr(req.Description),
+        Private:     github.Ptr(req.Private),
     }
     
     ctx := context.Background()
