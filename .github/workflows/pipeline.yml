@@ -104,18 +104,9 @@ jobs:
 
       - name: Apply Kubernetes Deployment
         run: |
-          kubectl apply -f kubernetes/deployment.yml 
-          kubectl apply -f kubernetes/service.yml
-          
-          kubectl rollout status deployment/github-api-service
-        
-          # Get deployment status and service info
-          echo "Deployment Status:"
-          kubectl get deployments
-          echo "Service Status:"
-          kubectl get services
-          echo "Pods Status:"
-          kubectl get pods
-          # Get service URL
-          echo "Service URL:"
-          minikube service github-api-service --url
+          kubectl apply -f kubernetes
+      
+      - name: Wait
+        run: sleep 15
+      - name: Pods
+        run: kubectl get pods
