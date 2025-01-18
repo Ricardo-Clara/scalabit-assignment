@@ -98,12 +98,12 @@ func (a *Application) CreateRepository(c *gin.Context) {
 
 func (a *Application) ListRepositories(c *gin.Context) {
     ctx := context.Background()
-    opts := &github.RepositoryListOptions{
+    opts := &github.RepositoryListByAuthenticatedUserOptions{
         ListOptions: github.ListOptions{PerPage: 100},
 		Type: "owner",
     }
     
-    repos, _, err := a.githubClient.Repositories.List(ctx, "", opts)
+    repos, _, err := a.githubClient.Repositories.ListByAuthenticatedUser(ctx, opts)
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
