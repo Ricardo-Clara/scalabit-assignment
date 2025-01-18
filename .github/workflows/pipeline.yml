@@ -94,7 +94,7 @@ jobs:
           
       - name: Expose the application
         run: |
-          kubectl expose deployment github-api --type=LoadBalancer --name=github-api-service --port=8080
+          kubectl expose deployment github-api-service --type=LoadBalancer --name=github-api-service --port=8080
           
       - name: Check Deployment Status
         run: |
