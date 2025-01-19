@@ -74,8 +74,8 @@ jobs:
         with:
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
-      - run: docker build -t richie223/github-api-service:latest .
-      - run: docker push richie223/github-api-service:latest
+      - run: docker build -t ${{ secrets.USERNAME }}/github-api-service:latest .
+      - run: docker push ${{ secrets.USERNAME }}/github-api-service:latest
       - run: docker logout
 
   deploy:
@@ -94,7 +94,9 @@ jobs:
           curl -LO "https://dl.k8s.io/release/v1.30.5/bin/linux/amd64/kubectl"
           sudo install kubectl /usr/local/bin/
           
-          minikube start --driver=docker
+          eval $(minikube docker-env)
+          docker build -t ${{ secrets.USERNAME }}/github-api-service:latest .
+          minikube start
 
       - name: Create secret
         run: |
