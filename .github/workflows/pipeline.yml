@@ -95,9 +95,9 @@ jobs:
           sudo install kubectl /usr/local/bin/
           
           minikube start
-          
+
           eval $(minikube docker-env)
-          docker build -t ${{ secrets.USERNAME }}/github-api-service:latest .
+          # docker build -t ${{ secrets.USERNAME }}/github-api-service:latest .
 
       - name: Create secret
         run: |
