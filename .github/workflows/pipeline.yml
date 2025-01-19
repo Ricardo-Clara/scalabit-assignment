@@ -74,8 +74,8 @@ jobs:
         with:
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
-      - run: docker build -t ${{ secrets.USERNAME }}/github-api-service:latest .
-      - run: docker push ${{ secrets.USERNAME }}/github-api-service:latest
+      - run: docker build -t richie223/github-api-service:latest .
+      - run: docker push richie223/github-api-service:latest
       - run: docker logout
 
   deploy:
@@ -105,8 +105,10 @@ jobs:
       - name: Apply Kubernetes Deployment
         run: |
           kubectl apply -f kubernetes
-      
+          kubectl get pods
+          kubectl describe secret github-secret
+
       - name: Wait
-        run: sleep 15
+        run: kubectl wait --for=condition=ready pod --all --timeout=30s
       - name: Pods
         run: kubectl get pods
