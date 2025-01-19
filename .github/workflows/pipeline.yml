@@ -83,7 +83,9 @@ jobs:
           minikube start --driver docker
 
       - name: Build Image
-        run: docker build -t ${{ secrets.USERNAME }}/github-api-service:latest .
+        run: |
+          eval $(minikube docker-env)
+          docker build -t ${{ secrets.USERNAME }}/github-api-service:latest .
 
       - name: Create Secret
         run: |
