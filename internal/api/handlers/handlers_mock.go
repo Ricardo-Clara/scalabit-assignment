@@ -12,28 +12,30 @@ import (
 )
 
 // GitHubMock represents a mock implementation of a GitHub client
+// MockError allows us to mock an api failure
 type GitHubMock struct {
 	MockError     error
 	RepositoryList []*github.Repository  
 	PRList         []*github.PullRequest 
 }
 
+// Mock of CreateRepository handler function
 func (g *GitHubMock) CreateRepository(c *gin.Context) {
     if g.MockError != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": g.MockError.Error()})
         return
     }
 
-	var repoRequest github.Repository
+	var repoRequest models.RepoRequest
 	if err := c.ShouldBindJSON(&repoRequest); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
     newRepo := &github.Repository{
-		Name:        repoRequest.Name,
-		Description: repoRequest.Description,
-		Private:     repoRequest.Private,
+		Name:        github.Ptr(repoRequest.Name),
+		Description: github.Ptr(repoRequest.Description),
+		Private:     github.Ptr(repoRequest.Private),
 	}
 	g.RepositoryList = append(g.RepositoryList, newRepo)
 
@@ -47,6 +49,7 @@ func (g *GitHubMock) CreateRepository(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
+// Mock of ListRepositories handler function
 func (g *GitHubMock) ListRepositories(c *gin.Context) {
     if g.MockError != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": g.MockError.Error()})
@@ -56,6 +59,7 @@ func (g *GitHubMock) ListRepositories(c *gin.Context) {
 	c.JSON(http.StatusOK, g.RepositoryList)
 }
 
+// Mock of DeleteRepository handler function
 func (g *GitHubMock) DeleteRepository(c *gin.Context) {
     if g.MockError != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": g.MockError.Error()})
@@ -76,7 +80,7 @@ func (g *GitHubMock) DeleteRepository(c *gin.Context) {
 	c.JSON(http.StatusNotFound, response)
 }
 
-
+// Mock of ListOpenPullRequests handler function
 func (g *GitHubMock) ListOpenPullRequests(c *gin.Context) {
     if g.MockError != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": g.MockError.Error()})
@@ -91,6 +95,7 @@ func (g *GitHubMock) ListOpenPullRequests(c *gin.Context) {
 		return
 	}
 
+	// Check if repository exists
 	repoExists := false
     for _, repo := range g.RepositoryList {
         if repo.GetName() == repoName {

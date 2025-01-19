@@ -4,10 +4,8 @@ import (
 	"context"
 	"errors"
 	_"fmt"
-	"os"
-
 	"net/http"
-
+	"os"
 	"strconv"
 
 	"github-api-service/internal/models"
@@ -18,6 +16,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// Use an interface for ease of testing with mocking
 type ApplicationInterface interface {
     CreateRepository(c *gin.Context)
     DeleteRepository(c *gin.Context)
@@ -25,19 +24,23 @@ type ApplicationInterface interface {
     ListOpenPullRequests(c *gin.Context)
 }
 
+// Github service wrapper
 type Application struct {
     githubClient *github.Client
     owner string
 }
 
+// ApplicationInterface wrapper for dependency injection
 type Client struct {
     App ApplicationInterface
 }
 
+// GetClientForTest returns a mock client to facilitate testing
 func GetClientForTest(mockClient ApplicationInterface) *Client {
     return &Client{ App: mockClient }
 }
 
+// GetClient initializes a GitHub client using OAuth authentication
 func GetClient() (*Client, error) {
     // Use this if running without minikube
 	// err := godotenv.Load("config.env")
@@ -45,6 +48,7 @@ func GetClient() (*Client, error) {
 	// 	fmt.Println("Warning: Could not load .env file. Using system environment variables.")
 	// }
 	
+    // Load authentication details
 	token := os.Getenv("TOKEN")
 	owner := os.Getenv("OWNER")
 
@@ -55,6 +59,7 @@ func GetClient() (*Client, error) {
 		return nil, errors.New("missing owner")
 	}
 
+    // Create a client with the access token
 	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 	tc := oauth2.NewClient(ctx, ts)
@@ -67,6 +72,7 @@ func GetClient() (*Client, error) {
 	return &Client{ App: application }, nil
 }
 
+// CreateRepository handles the creation of a new GitHub repository
 func (a *Application) CreateRepository(c *gin.Context) {
     var req models.RepoRequest
     if err := c.ShouldBindJSON(&req); err != nil {
@@ -74,6 +80,7 @@ func (a *Application) CreateRepository(c *gin.Context) {
         return
     }
     
+    // Construct a GitHub repository object from the request
     repo := &github.Repository{
         Name:        github.Ptr(req.Name),
         Description: github.Ptr(req.Description),
@@ -81,12 +88,13 @@ func (a *Application) CreateRepository(c *gin.Context) {
     }
     
     ctx := context.Background()
-    newRepo, _, err := a.githubClient.Repositories.Create(ctx, a.owner, repo)
+    newRepo, _, err := a.githubClient.Repositories.Create(ctx, "", repo)
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
 
+    // Return the created repository details
 	response := models.RepoResponse{
         Message: "Repository created successfully",
         Name: newRepo.GetName(),
@@ -97,6 +105,7 @@ func (a *Application) CreateRepository(c *gin.Context) {
     c.JSON(http.StatusCreated, response)
 }
 
+// ListRepositories retrieves all repositories owned by the authenticated user
 func (a *Application) ListRepositories(c *gin.Context) {
     ctx := context.Background()
     opts := &github.RepositoryListByAuthenticatedUserOptions{
@@ -110,6 +119,7 @@ func (a *Application) ListRepositories(c *gin.Context) {
         return
     }
     
+    // Convert the GitHub response into a simplified format
     formattedRepos := make([]models.RepoRequest, 0, len(repos))
     for _, repo := range repos {
         formattedRepos = append(formattedRepos, models.RepoRequest{
@@ -122,6 +132,7 @@ func (a *Application) ListRepositories(c *gin.Context) {
     c.JSON(http.StatusOK, formattedRepos)
 }
 
+// DeleteRepository removes a repository from the authenticated user's GitHub
 func (a *Application) DeleteRepository(c *gin.Context) {
     repo := c.Param("repo")
     
@@ -132,6 +143,7 @@ func (a *Application) DeleteRepository(c *gin.Context) {
         return
     }
     
+    // Return success message after deletion
 	response := models.DeleteRepoResponse{
         Message: "Repository deleted successfully",
     }
@@ -139,8 +151,9 @@ func (a *Application) DeleteRepository(c *gin.Context) {
     c.JSON(http.StatusOK, response)
 }
 
+// ListOpenPullRequests fetches open PRs for a given repository
 func (a *Application) ListOpenPullRequests(c *gin.Context) {
-    repo := c.Param("repo")    // Get repo name from request parameters
+    repo := c.Param("repo") // Get repository name from URL parameter
 
     ctx := context.Background()
     opts := &github.PullRequestListOptions{
@@ -166,6 +179,7 @@ func (a *Application) ListOpenPullRequests(c *gin.Context) {
         pullRequests = pullRequests[:limit]
     }
 
+    // Convert PR data into a simplified format
     formattedPRs := make([]models.PullRequestResponse, 0, len(pullRequests))
     for _, pr := range pullRequests {
         formattedPRs = append(formattedPRs, models.PullRequestResponse{

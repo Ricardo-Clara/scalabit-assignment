@@ -74,6 +74,17 @@ func TestCreateRepository(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, w.Code, "Code should be 400 BadRequest")
 	})
 
+	t.Run("Missing name in JSON", func(t *testing.T) {
+		request := `{"description": "test repo"}`
+		req, _ := http.NewRequest("POST", "/repositories", bytes.NewBufferString(request))
+		req.Header.Set("Content-Type", "application/json")
+		
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		
+		assert.Equal(t, http.StatusBadRequest, w.Code, "Code should be 400 BadRequest")
+	})
+
 	t.Run("Github error", func(t *testing.T) {
 		r := gin.Default()
 		mockClientError := &handlers.GitHubMock{MockError: errors.New("github api error")}
@@ -112,6 +123,9 @@ func TestListRepository(t *testing.T) {
 				&github.Repository{Name: github.Ptr("hello-world"), Description: github.Ptr("test repo"), Private: github.Ptr(true)},
 			},
 		}
+
+		gin.SetMode(gin.TestMode)
+
 		r := gin.Default()
 		ghClient := handlers.GetClientForTest(mockClient)
 		routes.SetupRoutes(r, *ghClient)
@@ -122,10 +136,8 @@ func TestListRepository(t *testing.T) {
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 	
-		// Assert that the status code is OK
 		assert.Equal(t, http.StatusOK, w.Code, "Code should be 200 OK")
 	
-		// Assert the response body contains the correct repositories
 		var repos []*github.Repository
 		err = json.Unmarshal(w.Body.Bytes(), &repos)
 		assert.NoError(t, err, errJSONUnmarshal)
@@ -138,6 +150,9 @@ func TestListRepository(t *testing.T) {
 	t.Run("Error while listing repositories", func(t *testing.T) {
 		// Set up mock client with an error message
 		mockClient := &handlers.GitHubMock{MockError: errors.New("mock error")}
+
+		gin.SetMode(gin.TestMode)
+
 		r := gin.Default()
 		ghClient := handlers.GetClientForTest(mockClient)
 		routes.SetupRoutes(r, *ghClient)
@@ -147,11 +162,9 @@ func TestListRepository(t *testing.T) {
 	
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
-	
-		// Assert that the status code is BadRequest
+
 		assert.Equal(t, http.StatusBadRequest, w.Code, "Code should be 400 BadRequest")
 	
-		// Assert that the response body contains the error message
 		var response map[string]string
 		err = json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err, errJSONUnmarshal)
@@ -160,10 +173,12 @@ func TestListRepository(t *testing.T) {
 	})
 
 	t.Run("Empty repository list", func(t *testing.T) {
-		// Set up mock client with an empty repository list
 		mockClient := &handlers.GitHubMock{
 			RepositoryList: []*github.Repository{}, // No repositories
 		}
+
+		gin.SetMode(gin.TestMode)
+
 		r := gin.Default()
 		ghClient := handlers.GetClientForTest(mockClient)
 		routes.SetupRoutes(r, *ghClient)
@@ -174,10 +189,8 @@ func TestListRepository(t *testing.T) {
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 	
-		// Assert that the status code is OK
 		assert.Equal(t, http.StatusOK, w.Code, "Code should be 200 OK")
 	
-		// Assert the response body contains an empty list
 		var repos []*github.Repository
 		err = json.Unmarshal(w.Body.Bytes(), &repos)
 		assert.NoError(t, err, errJSONUnmarshal)
@@ -189,13 +202,14 @@ func TestListRepository(t *testing.T) {
 
 func TestDeleteRepository(t *testing.T) {
 	t.Run("Successfully delete repository", func(t *testing.T) {
-		// Set up mock client with repositories
 		mockClient := &handlers.GitHubMock{
 			RepositoryList: []*github.Repository{
 				{Name: github.Ptr("test-repo")},
 				{Name: github.Ptr("hello-world")},
 			},
 		}
+
+		gin.SetMode(gin.TestMode)
 		
 		r := gin.Default()
 		ghClient := handlers.GetClientForTest(mockClient)
@@ -219,27 +233,26 @@ func TestDeleteRepository(t *testing.T) {
 	})
 
 	t.Run("Delete non-existent repository", func(t *testing.T) {
-		// Set up mock client with repositories
 		mockClient := &handlers.GitHubMock{
 			RepositoryList: []*github.Repository{
 				&github.Repository{Name: github.Ptr("test-repo")},
 			},
 		}
+
+		gin.SetMode(gin.TestMode)
+
 		r := gin.Default()
 		ghClient := handlers.GetClientForTest(mockClient)
 		routes.SetupRoutes(r, *ghClient)
 	
-		// Make a DELETE request to delete a non-existent repository "repo2"
 		req, err := http.NewRequest("DELETE", "/repositories/hello-world", nil)
 		assert.NoError(t, err, errRequestCreate)
 	
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 	
-		// Assert that the status code is NotFound
 		assert.Equal(t, http.StatusNotFound, w.Code, "Code should be 404 NotFound")
 	
-		// Assert the error message in response body
 		var response models.DeleteRepoResponse
 		err = json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err, errJSONUnmarshal)
@@ -250,23 +263,22 @@ func TestDeleteRepository(t *testing.T) {
 	})
 	
 	t.Run("Error while deleting repository", func(t *testing.T) {
-		// Set up mock client with error
 		mockClient := &handlers.GitHubMock{MockError: errors.New("mock error")}
+
+		gin.SetMode(gin.TestMode)
+
 		r := gin.Default()
 		ghClient := handlers.GetClientForTest(mockClient)
 		routes.SetupRoutes(r, *ghClient)
 	
-		// Make a DELETE request to delete "test-repo"
 		req, err := http.NewRequest("DELETE", "/repositories/test-repo", nil)
 		assert.NoError(t, err, errRequestCreate)
 	
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
-	
-		// Assert that the status code is BadRequest
+
 		assert.Equal(t, http.StatusBadRequest, w.Code, "Code should be 400 BadRequest")
 	
-		// Assert the error message in response body
 		var response map[string]string
 		err = json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err, errJSONUnmarshal)
@@ -312,6 +324,8 @@ func TestListOpenPullRequests(t *testing.T) {
             },
             PRList: mockPRs,
         }
+
+		gin.SetMode(gin.TestMode)
 
 		r := gin.Default()
         ghClient := handlers.GetClientForTest(mockClient)
@@ -391,16 +405,17 @@ func TestListOpenPullRequests(t *testing.T) {
 
 		mockClient := &handlers.GitHubMock{
             RepositoryList: []*github.Repository{
-                {Name: github.Ptr("test-repo")}, // Add the repository to RepositoryList
+                {Name: github.Ptr("test-repo")}, 
             },
             PRList: mockPRs,
         }
+
+		gin.SetMode(gin.TestMode)
 
 		r := gin.Default()
 		ghClient := handlers.GetClientForTest(mockClient)
 		routes.SetupRoutes(r, *ghClient)
 	
-		
 		req, err := http.NewRequest("GET", "/repositories/test-repo/pull-requests?limit=2", nil)
 		assert.NoError(t, err, errRequestCreate)
 	
@@ -409,14 +424,12 @@ func TestListOpenPullRequests(t *testing.T) {
 	
 		assert.Equal(t, http.StatusOK, w.Code, "Code should be 200 OK")
 	
-		
 		var response []models.PullRequestResponse
 		err = json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err, errJSONUnmarshal)
 	
 		assert.Len(t, response, 2, "There should be 2 pull requests")
 
-		// Assert first PR fields
 		assert.Equal(t, 1, response[0].Number, "First PR number should match")
 		assert.Equal(t, "First PR", response[0].Title, "First PR title should match")
 		assert.Equal(t, "testuser", response[0].User, "First PR user should match")
@@ -425,7 +438,6 @@ func TestListOpenPullRequests(t *testing.T) {
 					 response[0].CreatedAt.UTC().Truncate(time.Second), 
 					 "First PR creation time should match")
 	
-		// Assert second PR fields
 		assert.Equal(t, 2, response[1].Number, "Second PR number should match")
 		assert.Equal(t, "Second PR", response[1].Title, "Second PR title should match")
 		assert.Equal(t, "testuser", response[1].User, "Second PR user should match")
@@ -456,21 +468,20 @@ func TestListOpenPullRequests(t *testing.T) {
             PRList: mockPRs,
         }
 
+		gin.SetMode(gin.TestMode)
+
 		r := gin.Default()
 		ghClient := handlers.GetClientForTest(mockClient)
 		routes.SetupRoutes(r, *ghClient)
 	
-		// Make a GET request with an invalid limit parameter
 		req, err := http.NewRequest("GET", "/repositories/test-repo/pull-requests?limit=invalid", nil)
 		assert.NoError(t, err, errRequestCreate)
 	
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 	
-		// Assert that the status code is BadRequest
 		assert.Equal(t, http.StatusBadRequest, w.Code, "Code should be 400 BadRequest")
 	
-		// Assert the error message in response body
 		var response map[string]string
 		err = json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err, errJSONUnmarshal)
@@ -499,26 +510,25 @@ func TestListOpenPullRequests(t *testing.T) {
             PRList: mockPRs,
         }
 
+		gin.SetMode(gin.TestMode)
+
 		r := gin.Default()
 		ghClient := handlers.GetClientForTest(mockClient)
 		routes.SetupRoutes(r, *ghClient)
 	
-		// Make a GET request to list pull requests for a non-existent repository "repo2"
 		req, err := http.NewRequest("GET", "/repositories/hello-world/pull-requests", nil)
 		assert.NoError(t, err, errRequestCreate)
 	
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 	
-		// Assert that the status code is NotFound
 		assert.Equal(t, http.StatusNotFound, w.Code, "Code should be 404 NotFound")
 	
-		// Assert the error message in response body
 		var response map[string]string
 		err = json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err, errJSONUnmarshal)
 	
-		assert.Equal(t, "Repository 'hello-world' does not exist", response["error"], "Error message should be 'Repository does not exist'")
+		assert.Equal(t, "Repository 'hello-world' does not exist", response["error"], "Error message should be: 'Repository 'hello-world' does not exist'")
 	})
 	
 	t.Run("No pull requests for repository", func(t *testing.T) {
@@ -532,21 +542,20 @@ func TestListOpenPullRequests(t *testing.T) {
 			RepositoryList: mockRepo,
         }
 
+		gin.SetMode(gin.TestMode)
+
 		r := gin.Default()
 		ghClient := handlers.GetClientForTest(mockClient)
 		routes.SetupRoutes(r, *ghClient)
 	
-		// Make a GET request to list pull requests for repo1
 		req, err := http.NewRequest("GET", "/repositories/test-repo/pull-requests", nil)
 		assert.NoError(t, err, errRequestCreate)
 	
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 	
-		// Assert that the status code is OK
 		assert.Equal(t, http.StatusOK, w.Code, "Code should be 200 OK")
 	
-		// Assert that the response contains no pull requests
 		var response []models.PullRequestResponse
 		err = json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err, errJSONUnmarshal)
@@ -555,23 +564,22 @@ func TestListOpenPullRequests(t *testing.T) {
 	})
 
 	t.Run("Error listing pull requests", func(t *testing.T) {
-        // Setup mock with error
         mockClient := &handlers.GitHubMock{
             MockError: errors.New("failed to fetch pull requests"),
         }
+
+		gin.SetMode(gin.TestMode)
         
         r := gin.Default()
         ghClient := handlers.GetClientForTest(mockClient)
         routes.SetupRoutes(r, *ghClient)
 
-        // Create request
         req, err := http.NewRequest("GET", "/repositories/test-repo/pull-requests", nil)
         assert.NoError(t, err, errRequestCreate)
 
         w := httptest.NewRecorder()
         r.ServeHTTP(w, req)
 
-        // Assert error response
         assert.Equal(t, http.StatusBadRequest, w.Code, "Code should be 400 Bad Request")
 
         var response map[string]string

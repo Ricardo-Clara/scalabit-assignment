@@ -1,12 +1,12 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: github-api-service
+  name: github-api-service # Deployment name
 spec:
-  replicas: 1
+  replicas: 1 # Runs one instance
   selector:
     matchLabels:
-      app: github-api-service
+      app: github-api-service # Match pods to deployment
   template:
     metadata:
       labels:

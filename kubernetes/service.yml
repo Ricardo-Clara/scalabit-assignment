@@ -1,12 +1,13 @@
+# This exposes the Pod service
 apiVersion: v1
 kind: Service
 metadata:
   name: github-api-service
 spec:
   selector:
-    app: github-api-service
+    app: github-api-service # Match pods
   ports:
     - protocol: TCP
       port: 8080
       targetPort: 8080
-  type: NodePort
+  type: NodePort # Allows access

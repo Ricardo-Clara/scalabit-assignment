@@ -12,13 +12,16 @@ import (
 
 
 func main() {
+    // Gin router
     r := gin.Default()
     
+    // Get github client
     client, err := handlers.GetClient()
     if err != nil {
         log.Fatal(err)
     }
 
+    // Setup routes and handler functions in gin router
     routes.SetupRoutes(r, *client)
     
     log.Fatal(r.Run(":8080"))

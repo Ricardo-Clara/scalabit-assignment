@@ -6,7 +6,6 @@ import (
 )
 
 func SetupRoutes(r *gin.Engine, client handlers.Client) {
-    // Repository routes
     r.POST("/repositories",  client.App.CreateRepository)
 	r.GET("/repositories/:repo/pull-requests", client.App.ListOpenPullRequests)
     r.GET("/repositories", client.App.ListRepositories)
