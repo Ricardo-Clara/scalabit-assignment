@@ -98,7 +98,7 @@ jobs:
 
       - name: Create secret
         run: |
-          kubectl create secret generic github-secret \
+          kubectl create secret generic github-secrets \
           --from-literal=TOKEN=${{ secrets.TOKEN }} \
           --from-literal=OWNER=${{ secrets.USER }}
 
@@ -106,7 +106,7 @@ jobs:
         run: |
           kubectl apply -f kubernetes
           kubectl get pods
-          kubectl describe secret github-secret
+          kubectl describe secret github-secrets
 
       - name: Wait
         run: kubectl wait --for=condition=ready pod --all --timeout=30s
